@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Export Guest Messages</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 18px; color: #5c4a38; background: linear-gradient(135deg, #fffaf6, #efe3d7); min-height: 100vh; }
+    .card { max-width: 760px; margin: 0 auto; background: rgba(255,255,255,0.96); padding: 18px; border-radius: 18px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; font-size: 1.4rem; }
+    p { line-height: 1.6; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+    button { padding: 12px 16px; border: none; border-radius: 999px; background: linear-gradient(135deg, #ead7c0, #c79d7a); color: #fff; font-weight: 700; cursor: pointer; }
+    button:hover { filter: brightness(1.03); }
+    #status { margin-top: 12px; color: #7b654d; font-weight: 600; }
+    pre { background: #fff; padding: 12px; border-radius: 12px; overflow: auto; white-space: pre-wrap; word-break: break-word; max-height: 420px; }
+    @media (max-width: 640px) { body { padding: 10px; } .card { padding: 14px; } h2 { font-size: 1.15rem; } button { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Guest Messages Viewer</h2>
+    <p>This page opens the guest messages saved in your browser and lets you download them as a CSV file for Excel.</p>
+    <div class="actions">
+      <button id="downloadBtn" type="button">Download CSV File</button>
+      <button id="refreshBtn" type="button">Refresh</button>
+    </div>
+    <p id="status">Loading saved messages...</p>
+    <pre id="preview"></pre>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'weddingGuestMessages';
+    const statusEl = document.getElementById('status');
+    const previewEl = document.getElementById('preview');
+
+    function getMessages() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function downloadCSV() {
+      const messages = getMessages();
+      if (!messages.length) {
+        statusEl.textContent = 'No messages have been saved yet.';
+        return;
+      }
+
+      const rows = [
+        ['Name', 'Message', 'Date'],
+        ...messages.map(item => [item.name || '', item.message || '', item.createdAt || ''])
+      ];
+
+      const csv = rows
+        .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'wedding-guest-messages.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      statusEl.textContent = 'CSV file downloaded successfully.';
+    }
+
+    function renderPreview() {
+      const messages = getMessages();
+      if (!messages.length) {
+        statusEl.textContent = 'No messages found in this browser storage.';
+        previewEl.textContent = 'Nothing to show yet.';
+        return;
+      }
+
+      statusEl.textContent = `Found ${messages.length} saved message(s).`;
+      previewEl.textContent = JSON.stringify(messages, null, 2);
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+    document.getElementById('refreshBtn').addEventListener('click', renderPreview);
+    renderPreview();
+  </script>
+</body>
+</html>
